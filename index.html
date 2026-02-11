@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LavautoPlus PRO — Gerador de Prompts</title>
+  <style>
+    :root{
+      --primary:#e53935;
+      --secondary:#111111;
+      --dark:#0b0b0b;
+      --bg:#141414;
+      --success:#27ae60;
+      --danger:#e74c3c;
+      --muted:#9aa0a6;
+    }
+    body{
+      font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:var(--dark);
+      color:#fff;
+      padding:20px;
+      margin:0;
+      display:flex;
+      justify-content:center;
+    }
+    .container{ width:100%; max-width:520px; padding-bottom:40px; }
+    h2{
+      text-align:center;
+      color:var(--primary);
+      text-transform:uppercase;
+      margin:0 0 15px 0;
+      font-size:1.4rem;
+      letter-spacing:1px;
+    }
+    .panel{
+      background:#1b1b1b;
+      padding:15px;
+      border-radius:16px;
+      margin-bottom:15px;
+      border:1px solid #2a2a2a;
+    }
+    .style-selector{
+      width:100%;
+      padding:12px;
+      background:#000;
+      color:#fff;
+      border:1px solid var(--primary);
+      border-radius:10px;
+      font-size:14px;
+      font-weight:800;
+      margin-bottom:15px;
+      outline:none;
+      text-align:center;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .tabs{
+      display:flex;
+      gap:6px;
+      margin-bottom:15px;
+      background:#000;
+      padding:6px;
+      border-radius:12px;
+      border:1px solid #222;
+    }
+    .tab-btn{
+      flex:1;
+      padding:12px;
+      border:none;
+      background:transparent;
+      color:#777;
+      font-weight:800;
+      border-radius:8px;
+      cursor:pointer;
+      transition:0.25s;
+      font-size:12px;
+      text-transform:uppercase;
+    }
+    .tab-btn.active{
+      background:var(--primary);
+      color:#000;
+      box-shadow:0 2px 10px rgba(229,57,53,0.25);
+    }
+    .format-selector{ display:flex; gap:10px; margin-bottom:15px; }
+    .format-btn{
+      flex:1;
+      text-align:center;
+      padding:10px;
+      background:#222;
+      border-radius:10px;
+      font-weight:800;
+      border:2px solid transparent;
+      font-size:12px;
+      cursor:pointer;
+      color:#ccc;
+      user-select:none;
+    }
+    .format-btn.active{
+      border-color:var(--primary);
+      background:#240b0b;
+      color:var(--primary);
+    }
+    .mix-toggle{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-bottom:15px;
+      font-weight:700;
+      font-size:14px;
+      color:#c9c9c9;
+    }
+    .mix-toggle input{ transform:scale(1.35); accent-color:var(--primary); }
+    button#gen{
+      width:100%;
+      padding:16px;
+      background:var(--primary);
+      color:#000;
+      border:none;
+      border-radius:12px;
+      font-size:18px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 4px 0 #9f1f1c;
+      transition:transform 0.1s;
+    }
+    button#gen:active{ transform:translateY(2px); box-shadow:0 2px 0 #9f1f1c; }
+    .preview{
+      display:block;
+      background:#111;
+      padding:12px;
+      border-radius:12px;
+      margin-bottom:15px;
+      border-left:4px solid var(--primary);
+      border:1px solid #222;
+    }
+    .preview label{
+      font-size:10px;
+      color:#8b8b8b;
+      text-transform:uppercase;
+      display:block;
+      margin-bottom:4px;
+      letter-spacing:0.5px;
+    }
+    .preview div{
+      font-size:13px;
+      margin-bottom:10px;
+      font-weight:800;
+      color:#f1f1f1;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+    textarea{
+      width:100%;
+      height:260px;
+      background:#000;
+      color:#2ecc71;
+      border:1px solid #2a2a2a;
+      border-radius:10px;
+      padding:14px;
+      font-size:13px;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      box-sizing:border-box;
+      resize:none;
+      margin-bottom:14px;
+      display:none;
+    }
+    textarea.active{ display:block; }
+    .action-grid{ display:grid; grid-template-columns:1fr; gap:8px; }
+    .copy-btn{
+      width:100%;
+      padding:16px;
+      background:var(--success);
+      color:#fff;
+      border:none;
+      border-radius:12px;
+      font-weight:900;
+      font-size:16px;
+      cursor:pointer;
+    }
+    .copy-btn:active{ opacity:0.85; transform:scale(0.99); }
+    .hint{
+      margin-top:8px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🚗 LavautoPlus PRO</h2>
+
+  <div class="panel">
+    <select id="styleSelector" class="style-selector" onchange="checkStyle(); gerar();">
+      <option value="lavaAbertura" selected>🔥 Abertura + Leva e Traz (Story/Feed)</option>
+      <option value="lavaCuriosidade">📌 Curiosidade do Dia (Story Diário)</option>
+      <option value="lavaSoft99Fusso">✨ Polimento + Cera Fusso Coat Soft99 (Feed)</option>
+    </select>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('img', this)">🎨 Imagem</button>
+      <button class="tab-btn" onclick="switchTab('leg', this)">📝 Legenda</button>
+      <button class="tab-btn" onclick="switchTab('btn', this)">🔘 Botão</button>
+    </div>
+
+    <div class="format-selector" id="formatSelectorContainer">
+      <div id="btnStory" class="format-btn active" onclick="setFormat('Story')">📱 Story (9:16)</div>
+      <div id="btnPost" class="format-btn" onclick="setFormat('Post')">🖼️ Post (3:4)</div>
+    </div>
+
+    <label class="mix-toggle" id="mixToggleContainer">
+      <input type="checkbox" id="mixMode" checked> 🔀 Aleatório (variações)
+    </label>
+
+    <button id="gen" onclick="gerar()">🚀 GERAR TUDO</button>
+
+    <div class="hint">
+      Dica: em <b>Story</b> ele gera também 3 opções de botão + frases (aba “Botão”).
+    </div>
+  </div>
+
+  <div id="prev" class="preview">
+    <label>Conceito Ativo</label>
+    <div id="pHead" style="color:var(--primary)">Clique em GERAR...</div>
+
+    <label id="lblResumo">Resumo</label>
+    <div id="pResumo" style="color:#ffd4d4">—</div>
+
+    <label id="lblStory3" style="display:none">3 opções para o Story</label>
+    <div id="pStory3" style="display:none; font-weight:800; line-height:1.35;"></div>
+  </div>
+
+  <textarea id="outImg" class="active" readonly placeholder="O prompt da imagem aparecerá aqui..."></textarea>
+  <textarea id="outLeg" readonly placeholder="A legenda do post aparecerá aqui..."></textarea>
+  <textarea id="outStoryBtn" readonly placeholder="As 3 opções de botão + frases do Story aparecerão aqui..."></textarea>
+
+  <div class="action-grid">
+    <button id="btnCopy" class="copy-btn" onclick="copiar()">COPIAR PROMPT</button>
+  </div>
+</div>
+
+<script>
+  // =========================
+  // Estado
+  // =========================
+  let formatoStr = "VERTICAL (9:16)";
+  let currentTab = "img";
+  let lastGenerated = null;
+
+  // =========================
+  // PROMPTS BASE (templates)
+  // =========================
+
+  const PROMPT_BASE_LAVA_ABERTURA = `Criar uma IMAGEM PUBLICITÁRIA [FORMATO]
+para a marca LavautoPlus,
+misturando CARRO REALISTA + IDENTIDADE GRÁFICA INSTITUCIONAL FORTE.
+
+━━━━━━━━━━━━━━━━━━━━
+🔴 IDENTIDADE VISUAL (OBRIGATÓRIA)
+━━━━━━━━━━━━━━━━━━━━
+• Utilizar a logomarca oficial do LavautoPlus fornecida como referência visual
+• Não redesenhar • Não alterar cores
+• Inserir no topo central • Manter proporção original
+
+Paleta obrigatória:
+• Preto profundo
+• Vermelho vibrante automotivo (exatamente o tom da logo)
+• Branco forte
+
+Fundo:
+Preto texturizado (fibra de carbono ou metal escovado)
+Leve iluminação central
+Glow vermelho horizontal discreto
+Visual forte e impactante
+
+━━━━━━━━━━━━━━━━━━━━
+🚗 CARRO PRINCIPAL (OBRIGATÓRIO)
+━━━━━━━━━━━━━━━━━━━━
+Carro moderno realista ([CARRO_TIPO])
+Cor obrigatória: VERMELHO vibrante igual ao tom da logo
+Extremamente limpo, brilho intenso
+Reflexos realistas na lataria, verniz polido
+
+Composição:
+• Carro na parte central/inferior
+• Muito espaço negativo para leitura
+• Elementos institucionais (barras vermelhas metálicas + linhas finas vermelhas separando blocos)
+• Visual premium de anúncio, organizado e forte
+
+━━━━━━━━━━━━━━━━━━━━
+📝 TEXTOS NA IMAGEM (EXATOS)
+━━━━━━━━━━━━━━━━━━━━
+Topo:
+“[TOPO]”
+
+Texto principal:
+“[P1]
+[P2]”
+
+Destaque:
+“[B1]”
+“[B2]”
+
+Autoridade:
+“[AUTORIDADE]”
+
+Rodapé:
+“[SLOGAN]”
+
+CTA:
+“[CTA]”
+
+Qualidade: 4K+, ultra nítido, zero blur, zero ruído
+Proibido: azul, fundo branco, mascotes, mockups, poluição visual`;
+
+  const PROMPT_BASE_LAVA_CURIOSIDADE = `Criar uma IMAGEM PUBLICITÁRIA [FORMATO]
+para a marca LavautoPlus, no quadro “Curiosidade do Dia”.
+
+━━━━━━━━━━━━━━━━━━━━
+🔴 IDENTIDADE VISUAL (OBRIGATÓRIA)
+━━━━━━━━━━━━━━━━━━━━
+• Utilizar a logomarca oficial do LavautoPlus fornecida como referência visual
+• Não redesenhar • Não alterar cores
+• Inserir no topo central • Manter proporção original
+Paleta: Preto profundo + Vermelho vibrante + Branco forte
+Fundo: Preto texturizado (fibra de carbono / metal escovado) + glow vermelho discreto
+
+━━━━━━━━━━━━━━━━━━━━
+🧱 ESTRUTURA (INSTITUCIONAL)
+━━━━━━━━━━━━━━━━━━━━
+• Layout em blocos, com barras vermelhas e linhas finas vermelhas separando seções
+• Visual limpo, forte e profissional
+
+━━━━━━━━━━━━━━━━━━━━
+🧠 CONTEÚDO (EXATO)
+━━━━━━━━━━━━━━━━━━━━
+Topo grande:
+“CURIOSIDADE DO DIA 🚗”
+
+Pergunta:
+“[PERGUNTA]”
+
+Explicação:
+“[EXPLICACAO]”
+
+Chamada final:
+“Quer fazer do jeito certo?”
+“Chama no WhatsApp que a LavautoPlus resolve 👇”
+
+Imagem de apoio realista relacionada ao tema (pintura, espuma, carro vermelho, etc.)
+Qualidade: 4K+, ultra nítido, textos legíveis
+Proibido: azul, fundo branco, mascotes, blur, erro de texto`;
+
+  const PROMPT_BASE_LAVA_SOFT99 = `Criar uma IMAGEM PUBLICITÁRIA [FORMATO]
+para a marca LavautoPlus, com estética automotiva premium e institucional.
+
+━━━━━━━━━━━━━━━━━━━━
+🔴 IDENTIDADE VISUAL (OBRIGATÓRIA)
+━━━━━━━━━━━━━━━━━━━━
+• Utilizar a logomarca oficial do LavautoPlus fornecida como referência visual
+• Não redesenhar • Não alterar cores
+• Inserir no topo central • Manter proporção original
+Paleta: Preto profundo + Vermelho vibrante + Branco forte
+Fundo: Preto texturizado (fibra de carbono / metal escovado) + glow vermelho discreto
+
+━━━━━━━━━━━━━━━━━━━━
+🚗 CENA PRINCIPAL
+━━━━━━━━━━━━━━━━━━━━
+Carro vermelho extremamente brilhante, reflexo espelhado
+Efeito de gotas de água com alta hidrorrepelência (beading forte)
+Iluminação de estúdio premium
+
+Produto de apoio:
+Embalagem realista da Soft99 Fusso Coat em segundo plano
+Sem distorcer a marca, sem alterar rótulo
+
+━━━━━━━━━━━━━━━━━━━━
+📝 TEXTOS NA IMAGEM (EXATOS)
+━━━━━━━━━━━━━━━━━━━━
+Topo:
+“[S_TOPO]”
+
+Título:
+“[S_TITULO]”
+
+Benefício:
+“[S_BENEFICIO]”
+
+Explicação:
+“[S_EXPLICACAO]”
+
+Observação:
+“[S_OBS]”
+
+CTA:
+“[S_CTA]”
+
+Regras:
+Tipografia forte, sem serifa, hierarquia clara
+Layout em blocos com barras vermelhas (institucional)
+Qualidade: 4K+, ultra nítido, zero blur, zero ruído
+Proibido: azul, fundo branco, mascotes, mockups, poluição visual`;
+
+  // =========================
+  // Variações
+  // =========================
+  const lavaCarrosTipo = ["Sedan moderno", "SUV moderno", "Sedan executivo", "SUV premium"];
+
+  const lavaAberturaTextos = [
+    {
+      topo:"JÁ ESTAMOS FUNCIONANDO",
+      p1:"Seu carro tá sujo?",
+      p2:"Chama no WhatsApp que a LavautoPlus busca e entrega ele limpinho.",
+      b1:"LEVA E TRAZ DISPONÍVEL",
+      b2:"Buscamos aí na sua casa e devolvemos brilhando",
+      autoridade:"Mais de 15 anos de experiência",
+      slogan:"Sempre perto de você",
+      cta:"CHAMA NO WHATS 👇"
+    },
+    {
+      topo:"ATENDIMENTO HOJE",
+      p1:"Tá sem tempo pra lavar o carro?",
+      p2:"Chama no WhatsApp que a LavautoPlus resolve pra você.",
+      b1:"LEVA E TRAZ DISPONÍVEL",
+      b2:"Seu carro impecável sem você sair de casa",
+      autoridade:"Mais de 15 anos de experiência",
+      slogan:"Sempre perto de você",
+      cta:"CHAMA NO WHATS 👇"
+    },
+    {
+      topo:"ATENDIMENTO LIBERADO",
+      p1:"Carro sujo na garagem?",
+      p2:"Chama no WhatsApp que a LavautoPlus busca e devolve brilhando.",
+      b1:"LEVA E TRAZ DISPONÍVEL",
+      b2:"A gente busca e entrega com praticidade",
+      autoridade:"Mais de 15 anos de experiência",
+      slogan:"Sempre perto de você",
+      cta:"CHAMA NO WHATS 👇"
+    }
+  ];
+
+  const lavaCuriosidades = [
+    {
+      pergunta:"Sabia que lavar o carro no sol forte pode manchar a pintura?",
+      explicacao:"O calor seca a água rápido demais e pode deixar marcas no verniz. O ideal é lavar na sombra."
+    },
+    {
+      pergunta:"Sabia que fezes de pássaro podem queimar a pintura do carro?",
+      explicacao:"Se ficar muito tempo, pode manchar o verniz. Quanto mais rápido limpar, melhor."
+    },
+    {
+      pergunta:"Sabia que poeira acumulada pode riscar a pintura na hora de lavar?",
+      explicacao:"O certo é tirar a sujeira com água e técnica antes de encostar pra não riscar."
+    },
+    {
+      pergunta:"Sabia que detergente comum pode apagar o brilho da pintura?",
+      explicacao:"Produto errado agride o verniz e remove proteção. Shampoo automotivo é feito pra limpar sem estragar."
+    }
+  ];
+
+  const soft99Variacoes = [
+    {
+      topo:"NOVO PROCEDIMENTO NA LAVAUTOPLUS",
+      titulo:"Polimento com Cera Fusso Coat Soft99",
+      beneficio:"Proteção na pintura por até 12 meses*",
+      explicacao:"Alta durabilidade e hidrorrepelência.\nProtege contra sol, chuva e sujeira.",
+      obs:"*Com manutenções corretas",
+      cta:"Não perde tempo. Faça já seu orçamento 👇"
+    },
+    {
+      topo:"CHEGOU NOVIDADE NA LAVAUTOPLUS",
+      titulo:"Polimento com Cera Fusso Coat Soft99",
+      beneficio:"Proteção de até 12 meses",
+      explicacao:"Mais brilho e proteção.\nÁgua escorre fácil da pintura.",
+      obs:"Com manutenção correta",
+      cta:"Quer seu carro assim? Chama no Whats 👇"
+    }
+  ];
+
+  // =========================
+  // UI Helpers
+  // =========================
+  function setFormat(f){
+    // ✅ CORREÇÃO: Post é 3:4
+    formatoStr = (f === "Story") ? "VERTICAL (9:16)" : "QUADRADO RETRATO (3:4)";
+    document.getElementById("btnStory").classList.toggle("active", f === "Story");
+    document.getElementById("btnPost").classList.toggle("active", f === "Post");
+    gerar();
+  }
+
+  function switchTab(tab, el){
+    currentTab = tab;
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+    if(el) el.classList.add("active");
+
+    document.getElementById("outImg").classList.remove("active");
+    document.getElementById("outLeg").classList.remove("active");
+    document.getElementById("outStoryBtn").classList.remove("active");
+
+    if(tab === "img"){
+      document.getElementById("outImg").classList.add("active");
+      document.getElementById("btnCopy").innerText = "COPIAR PROMPT";
+    } else if(tab === "leg"){
+      document.getElementById("outLeg").classList.add("active");
+      document.getElementById("btnCopy").innerText = "COPIAR LEGENDA";
+    } else {
+      document.getElementById("outStoryBtn").classList.add("active");
+      document.getElementById("btnCopy").innerText = "COPIAR BOTÃO";
+    }
+  }
+
+  function getRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function pickUnique(arr, used){
+    const options = arr.filter(x => !used.has(x));
+    const chosen = options.length ? options[Math.floor(Math.random() * options.length)]
+                                  : arr[Math.floor(Math.random() * arr.length)];
+    used.add(chosen);
+    return chosen;
+  }
+
+  function checkStyle(){
+    const style = document.getElementById("styleSelector").value;
+    document.getElementById("mixToggleContainer").style.display = "flex";
+    document.getElementById("formatSelectorContainer").style.display = "flex";
+
+    if(style === "lavaAbertura") document.getElementById("lblResumo").innerText = "Resumo do anúncio";
+    if(style === "lavaCuriosidade") document.getElementById("lblResumo").innerText = "Tema da curiosidade";
+    if(style === "lavaSoft99Fusso") document.getElementById("lblResumo").innerText = "Resumo do post";
+  }
+
+  // =========================
+  // Story 3 opções
+  // =========================
+  function gerarStory3(style){
+    const isStory = formatoStr.includes("9:16");
+    const lbl = document.getElementById("lblStory3");
+    const prev = document.getElementById("pStory3");
+    const out  = document.getElementById("outStoryBtn");
+
+    if(!isStory){
+      lbl.style.display = "none";
+      prev.style.display = "none";
+      out.value = "";
+      return;
+    }
+
+    const pools = {
+      lavaAbertura: {
+        cta:["CHAMAR NO WHATS","AGENDAR AGORA","QUERO LEVA E TRAZ","FAZER ORÇAMENTO","FALAR AGORA"],
+        overlay:["Carro limpinho sem você sair de casa.","Lavagem caprichada e brilho de verdade.","Seu carro limpo e bem cuidado."],
+        prova:["Leva e traz disponível.","Mais de 15 anos de experiência.","Atendimento rápido."]
+      },
+      lavaCuriosidade: {
+        cta:["CHAMAR NO WHATS","QUERO ORÇAMENTO","AGENDAR AGORA","FALAR COM A LAVAUTOPLUS"],
+        overlay:["Dica rápida pra não estragar a pintura.","Cuidado simples que faz diferença.","Quer fazer certo? A gente resolve."],
+        prova:["Lavagem profissional.","Capricho e cuidado.","Seu carro bem tratado."]
+      }
+    };
+
+    const pack = pools[style] || pools.lavaAbertura;
+
+    const usedCta = new Set(), usedOv = new Set(), usedPf = new Set();
+    const options = [1,2,3].map(i => {
+      const cta = pickUnique(pack.cta, usedCta);
+      const ov  = pickUnique(pack.overlay, usedOv);
+      const pf  = pickUnique(pack.prova, usedPf);
+      return { i, cta, ov, pf };
+    });
+
+    lbl.style.display = "block";
+    prev.style.display = "block";
+    prev.innerText = options.map(o => `Opção ${o.i}: ${o.cta}\n${o.ov}\n${o.pf}`).join("\n\n");
+
+    out.value = options.map(o => `OPÇÃO ${o.i}\nBOTÃO: ${o.cta}\nFRASE: ${o.ov}\nPROVA: ${o.pf}\n`).join("\n");
+  }
+
+  // =========================
+  // Legendas
+  // =========================
+  function gerarLegenda(style, obj){
+    const hashtagsBase = "#LavautoPlus #LavagemAutomotiva #CarroLimpo";
+    let texto = "";
+
+    if(style === "lavaAbertura"){
+      texto = `🚗 ${obj.topo}
+
+${obj.p1}
+${obj.p2}
+
+✅ ${obj.b1}
+✅ ${obj.autoridade}
+
+📲 ${obj.cta.replace("👇","").trim()}
+
+${hashtagsBase} #LevaETraz #LavagemCaprichada`;
+    }
+
+    if(style === "lavaCuriosidade"){
+      texto = `📌 CURIOSIDADE DO DIA 🚗
+
+${obj.pergunta}
+
+${obj.explicacao}
+
+Quer fazer do jeito certo?
+Chama no WhatsApp que a LavautoPlus resolve 👇
+
+${hashtagsBase} #DicaDoDia #CuidadoAutomotivo`;
+    }
+
+    if(style === "lavaSoft99Fusso"){
+      texto = `✨ ${obj.topo}
+
+${obj.titulo}
+
+${obj.beneficio}
+${obj.obs ? obj.obs : ""}
+
+${obj.explicacao}
+
+${obj.cta.replace("👇","").trim()}
+
+${hashtagsBase} #PolimentoAutomotivo #ProtecaoDePintura #Soft99 #FussoCoat`;
+    }
+
+    document.getElementById("outLeg").value = texto;
+  }
+
+  // =========================
+  // Gerar principal
+  // =========================
+  function gerar(){
+    const style = document.getElementById("styleSelector").value;
+    const isMix = document.getElementById("mixMode").checked;
+
+    let promptFinal = "";
+    let headline = "";
+    let resumo = "";
+    let obj = null;
+
+    if(style === "lavaAbertura"){
+      const carro = isMix ? getRandom(lavaCarrosTipo) : lavaCarrosTipo[0];
+      obj = isMix ? getRandom(lavaAberturaTextos) : lavaAberturaTextos[0];
+
+      headline = obj.topo;
+      resumo = `${carro} • ${obj.b1} • ${obj.autoridade}`;
+
+      promptFinal = PROMPT_BASE_LAVA_ABERTURA
+        .replace("[FORMATO]", formatoStr)
+        .replace("[CARRO_TIPO]", carro)
+        .replace("[TOPO]", obj.topo)
+        .replace("[P1]", obj.p1)
+        .replace("[P2]", obj.p2)
+        .replace("[B1]", obj.b1)
+        .replace("[B2]", obj.b2)
+        .replace("[AUTORIDADE]", obj.autoridade)
+        .replace("[SLOGAN]", obj.slogan)
+        .replace("[CTA]", obj.cta);
+    }
+
+    else if(style === "lavaCuriosidade"){
+      obj = isMix ? getRandom(lavaCuriosidades) : lavaCuriosidades[0];
+      headline = "Curiosidade do Dia";
+      resumo = obj.pergunta;
+
+      promptFinal = PROMPT_BASE_LAVA_CURIOSIDADE
+        .replace("[FORMATO]", formatoStr)
+        .replace("[PERGUNTA]", obj.pergunta)
+        .replace("[EXPLICACAO]", obj.explicacao);
+    }
+
+    else if(style === "lavaSoft99Fusso"){
+      obj = isMix ? getRandom(soft99Variacoes) : soft99Variacoes[0];
+      headline = "Soft99 Fusso Coat";
+      resumo = obj.beneficio;
+
+      promptFinal = PROMPT_BASE_LAVA_SOFT99
+        .replace("[FORMATO]", formatoStr)
+        .replace("[S_TOPO]", obj.topo)
+        .replace("[S_TITULO]", obj.titulo)
+        .replace("[S_BENEFICIO]", obj.beneficio)
+        .replace("[S_EXPLICACAO]", obj.explicacao)
+        .replace("[S_OBS]", obj.obs)
+        .replace("[S_CTA]", obj.cta);
+    }
+
+    document.getElementById("pHead").innerText = headline;
+    document.getElementById("pResumo").innerText = resumo;
+    document.getElementById("outImg").value = promptFinal;
+
+    gerarStory3(style);
+    gerarLegenda(style, obj || {});
+    lastGenerated = { style, headline, obj, formatoStr };
+  }
+
+  // =========================
+  // Copiar
+  // =========================
+  function copiar(){
+    const idAlvo = (currentTab === "img") ? "outImg" : (currentTab === "leg") ? "outLeg" : "outStoryBtn";
+    const area = document.getElementById(idAlvo);
+    if(!area.value) return alert("Gere primeiro!");
+    area.select();
+    area.setSelectionRange(0, 999999);
+    navigator.clipboard.writeText(area.value);
+
+    const btn = document.getElementById("btnCopy");
+    const txtOriginal = btn.innerText;
+    btn.innerText = "COPIADO! ✅";
+    setTimeout(() => { btn.innerText = txtOriginal; }, 1200);
+  }
+
+  // Init
+  checkStyle();
+  setTimeout(gerar, 250);
+</script>
+
+</body>
+</html>
