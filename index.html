@@ -111,6 +111,28 @@
             return dataStr;
         }
 
+        // Calcula garantia de N dias (padrão 90) a partir da data de pagamento/retirada (formato dd/mm/aaaa)
+        function calcularGarantia(dataPagamentoStr, diasGarantia = 90) {
+            if (!dataPagamentoStr || typeof dataPagamentoStr !== 'string' || !dataPagamentoStr.includes('/')) return null;
+            const partes = dataPagamentoStr.split('/');
+            if (partes.length !== 3) return null;
+            const dia = parseInt(partes[0], 10), mes = parseInt(partes[1], 10) - 1, ano = parseInt(partes[2], 10);
+            const dataInicio = new Date(ano, mes, dia);
+            if (isNaN(dataInicio.getTime())) return null;
+
+            const dataFim = new Date(dataInicio);
+            dataFim.setDate(dataFim.getDate() + diasGarantia);
+
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            dataFim.setHours(0, 0, 0, 0);
+
+            const diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
+            const dataFimBR = `${String(dataFim.getDate()).padStart(2, '0')}/${String(dataFim.getMonth() + 1).padStart(2, '0')}/${dataFim.getFullYear()}`;
+
+            return { ativa: diasRestantes > 0, diasRestantes, dataFim: dataFimBR };
+        }
+
         // Mapeia o status interno da oficina para uma linguagem simples pro cliente
         function infoEtapa(status) {
             const s = (status || "").toUpperCase().trim();
@@ -171,10 +193,30 @@
 
                 resultado.innerHTML = "";
 
+                // Resumo geral do equipamento (aparece quando há mais de uma visita registrada)
+                if (itens.length > 1) {
+                    const totalVisitas = itens.length;
+                    const totalInvestido = itens.filter(i => (i.status || '').toUpperCase() === 'PAGO').reduce((a, b) => a + parseFloat(b.valor_servico || 0), 0);
+                    resultado.innerHTML += `
+                        <div class="card p-4 bg-primary/5 border border-primary/10 flex items-center justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase text-primary/70">Total de Visitas</p>
+                                <p class="text-lg font-bold text-primary">${totalVisitas}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] font-bold uppercase text-primary/70">Total Investido</p>
+                                <p class="text-lg font-bold text-primary">R$ ${totalInvestido.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 itens.forEach(d => {
-                    const info = infoEtapa(d.status);
+                    const status = (d.status || '').toUpperCase().trim();
+                    const info = infoEtapa(status);
                     const total = parseFloat(d.valor_servico || 0);
-                    const servicos = d.servico_principal ? d.servico_principal.split('+').map(s => s.trim()).join(', ') : null;
+                    const itensExecutados = d.servico_principal ? d.servico_principal.split('+').map(s => s.trim()).filter(Boolean) : [];
+                    const garantia = status === 'PAGO' ? calcularGarantia(d.data_pagamento) : null;
 
                     resultado.innerHTML += `
                         <div class="card p-5">
@@ -190,10 +232,36 @@
                                 <div class="text-[12px] bg-surface-container-low p-3 rounded-xl space-y-1 font-medium text-on-surface-variant mt-2">
                                     <p><span class="text-on-background font-bold">EQUIPAMENTO:</span> ${d.equipamento || '---'}</p>
                                     <p><span class="text-on-background font-bold">ENTRADA:</span> ${formatarDataBR(d.data_entrada)}</p>
-                                    ${servicos ? `<p><span class="text-on-background font-bold">SERVIÇOS:</span> ${servicos}</p>` : ''}
-                                    ${d.status === 'PAGO' ? `<p><span class="text-on-background font-bold">RETIRADA/PAGAMENTO:</span> ${formatarDataBR(d.data_pagamento)}</p>` : ''}
+                                    ${status === 'PAGO' ? `<p><span class="text-on-background font-bold">RETIRADA/PAGAMENTO:</span> ${formatarDataBR(d.data_pagamento)}</p>` : ''}
                                 </div>
-                                ${(d.status === 'AGUARDANDO PAGAMENTO' || d.status === 'PAGO') ? `
+
+                                ${itensExecutados.length ? `
+                                    <div class="mt-3">
+                                        <p class="text-[11px] font-bold uppercase text-on-surface-variant mb-1.5">Peças e Serviços Realizados</p>
+                                        <div class="space-y-1.5">
+                                            ${itensExecutados.map(item => `
+                                                <div class="flex items-center gap-2 bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2">
+                                                    <span class="material-symbols-outlined text-primary text-[16px]">build_circle</span>
+                                                    <span class="text-[12px] font-semibold text-on-background uppercase flex-1">${item}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${garantia ? `
+                                    <div class="mt-3 rounded-xl p-3 border ${garantia.ativa ? 'bg-emerald-50 border-emerald-200' : 'bg-surface-container-low border-outline-variant/40'}">
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-[18px] ${garantia.ativa ? 'text-emerald-600' : 'text-on-surface-variant'}">verified_user</span>
+                                            <span class="text-[11px] font-bold uppercase ${garantia.ativa ? 'text-emerald-700' : 'text-on-surface-variant'}">
+                                                ${garantia.ativa ? `Na garantia até ${garantia.dataFim} (faltam ${garantia.diasRestantes} dia${garantia.diasRestantes === 1 ? '' : 's'})` : `Garantia expirada em ${garantia.dataFim}`}
+                                            </span>
+                                        </div>
+                                        <p class="text-[10px] text-on-surface-variant mt-1 pl-6">Garantia de 90 dias sobre as peças e serviços listados acima, contados a partir da data de retirada.</p>
+                                    </div>
+                                ` : ''}
+
+                                ${(status === 'AGUARDANDO PAGAMENTO' || status === 'PAGO') ? `
                                     <div class="flex items-center justify-between pt-2">
                                         <span class="text-xs font-bold text-on-surface-variant uppercase">Valor</span>
                                         <span class="text-xl font-bold ${info.cor}">R$ ${total.toFixed(2)}</span>
