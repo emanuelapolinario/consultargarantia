@@ -157,7 +157,7 @@
             return `${dia}/${mes}/${ano}`;
         }
 
-        // Cálculo da Garantia de 90 dias após o pagamento
+        // Cálculo da Garantia de 90 dias após a retirada/pagamento
         function calcularGarantia(dataPagamentoStr, diasGarantia = 90) {
             const dataPagamento = parseDataGenerica(dataPagamentoStr);
             if (!dataPagamento) return null;
@@ -180,18 +180,37 @@
             };
         }
 
+        // Atualizado: "PAGO" agora deixa explícito que a máquina já foi retirada
         function infoEtapa(status) {
             const s = (status || "").toUpperCase().trim();
-            if (s === "PAGO") return { passo: 3, titulo: "Concluído", desc: "Serviço finalizado e pago. Máquina liberada para retirada.", cor: "text-emerald-600", bg: "bg-emerald-100 text-emerald-800" };
-            if (s === "AGUARDANDO PAGAMENTO") return { passo: 2, titulo: "Pronto - Aguardando Pagamento", desc: "O reparo foi concluído. Falta apenas o pagamento para retirar.", cor: "text-blue-600", bg: "bg-blue-100 text-blue-800" };
-            return { passo: 1, titulo: "Em Análise", desc: "Sua máquina está na bancada em diagnóstico/reparo.", cor: "text-amber-600", bg: "bg-amber-100 text-amber-800" };
+            if (s === "PAGO") return { 
+                passo: 3, 
+                titulo: "Retirado e Pago", 
+                desc: "Serviço finalizado, pago e máquina retirada pelo cliente.", 
+                cor: "text-emerald-600", 
+                bg: "bg-emerald-100 text-emerald-800" 
+            };
+            if (s === "AGUARDANDO PAGAMENTO") return { 
+                passo: 2, 
+                titulo: "Pronto - Aguardando Retirada", 
+                desc: "O reparo foi concluído. Aguardando pagamento e retirada pelo cliente.", 
+                cor: "text-blue-600", 
+                bg: "bg-blue-100 text-blue-800" 
+            };
+            return { 
+                passo: 1, 
+                titulo: "Em Análise", 
+                desc: "Sua máquina está na bancada em diagnóstico/reparo.", 
+                cor: "text-amber-600", 
+                bg: "bg-amber-100 text-amber-800" 
+            };
         }
 
         function renderBarraEtapas(passoAtual) {
             const etapas = [
                 { n: 1, label: "Recebido" },
                 { n: 2, label: "Pronto" },
-                { n: 3, label: "Concluído" }
+                { n: 3, label: "Retirado" }
             ];
             return `
                 <div class="flex items-start w-full px-2">
@@ -301,7 +320,7 @@
                                 <div class="text-[12px] bg-surface-container-low p-3 rounded-xl space-y-1 font-medium text-on-surface-variant mt-2">
                                     <p><span class="text-on-background font-bold">EQUIPAMENTO:</span> ${equipamento}</p>
                                     <p><span class="text-on-background font-bold">ENTRADA:</span> ${dataEntrada}</p>
-                                    ${status === 'PAGO' ? `<p><span class="text-on-background font-bold">PAGAMENTO / RETIRADA:</span> ${dataPagamento}</p>` : ''}
+                                    ${status === 'PAGO' ? `<p><span class="text-on-background font-bold">DATA DE RETIRADA:</span> ${dataPagamento}</p>` : ''}
                                 </div>
 
                                 ${itensExecutados.length ? `
@@ -346,7 +365,7 @@
                                                 "${escapeHtml(textoServicos)}"
                                             </p>
                                             <p class="text-[9px] ${garantia.ativa ? 'text-emerald-600' : 'text-red-600'} mt-1">
-                                                * A garantia cobre exclusivamente os componentes/serviços listados acima executados nesta OS, contados a partir da data do pagamento (${escapeHtml(garantia.dataPagamentoBR)}).
+                                                * A garantia cobre exclusivamente os componentes e serviços listados acima, contados a partir da data de retirada (${escapeHtml(garantia.dataPagamentoBR)}).
                                             </p>
                                         </div>
                                     </div>
@@ -354,7 +373,7 @@
 
                                 ${(status === 'AGUARDANDO PAGAMENTO' || status === 'PAGO') ? `
                                     <div class="flex items-center justify-between pt-2">
-                                        <span class="text-xs font-bold text-on-surface-variant uppercase">Valor</span>
+                                        <span class="text-xs font-bold text-on-surface-variant uppercase">Valor Pago</span>
                                         <span class="text-xl font-bold ${info.cor}">R$ ${total.toFixed(2)}</span>
                                     </div>
                                 ` : ''}
